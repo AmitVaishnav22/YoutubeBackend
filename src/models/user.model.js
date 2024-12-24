@@ -49,14 +49,14 @@ const userSchema=new Schema({
 //callbacks cant be used since it cannot access objects of another class we have to use normal function and crypt our password
 userSchema.pre("save",async function (next) {
     if(!this.isModified("password")) return next()
-    this.password=bcrypt.hash(this.password,10)
+    this.password=await bcrypt.hash(this.password,10)
     next()
 })
 
 userSchema.methods.isPasswordCorrect=async function(password) {
     return await bcrypt.compare(password,this.password)
 }
-
+ 
 userSchema.methods.generateAccessToken=function(){
     jwt.sign(
         {
