@@ -249,6 +249,7 @@ const updateUserCoverImage=asyncHandler(async(req,res)=>{
     const previousfilePath=req.user?.coverImage
     if(previousfilePath){
         await deleteOnCloudinary(previousfilePath)
+        //console.log("deleted previous file")
     }
 
     const user = await User.findByIdAndUpdate(
