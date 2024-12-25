@@ -1,7 +1,7 @@
 import {asyncHandler} from "../utils/asyncHandler.js"
 import {apiError} from "../utils/apiError.js"
 import {User} from "../models/user.model.js"
-import {uploadOnCloudinary} from "../utils/cloudinary.js"
+import {deleteOnCloudinary, uploadOnCloudinary} from "../utils/cloudinary.js"
 import {apiResponse} from "../utils/apiResponse.js"
 import jwt from "jsonwebtoken"
  
@@ -216,6 +216,11 @@ const updateUserAvatar=asyncHandler(async(req,res)=>{
         throw new apiError(400,"error while uploading avatar")
     }
 
+    const previousfilePath=req.user?.avatar
+    if(previousfilePath){
+        await deleteOnCloudinary(previousfilePath)
+        //console.log("deleted previous file")
+    }
     const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
@@ -225,6 +230,8 @@ const updateUserAvatar=asyncHandler(async(req,res)=>{
         },
         {new:true}
     ).select("-password -refreshToken")
+    
+    
 
     return res.status(200)
               .json(new apiResponse(200,user,"avatar successfully uploaded"))
@@ -238,6 +245,10 @@ const updateUserCoverImage=asyncHandler(async(req,res)=>{
     const coverImage=await uploadOnCloudinary(coverImageLocalPath)
     if (!coverImage.url){
         throw new apiError(400,"error while uploading avatar")
+    }
+    const previousfilePath=req.user?.coverImage
+    if(previousfilePath){
+        await deleteOnCloudinary(previousfilePath)
     }
 
     const user = await User.findByIdAndUpdate(
