@@ -3,6 +3,7 @@ import {apiError} from "../utils/apiError.js"
 import {User} from "../models/user.model.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import {apiResponse} from "../utils/apiResponse.js"
+import jwt from "jsonwebtoken"
  
 
 const generateAccessAndRefreshTokens=async(userId)=>{
@@ -129,10 +130,46 @@ const logoutUser=asyncHandler(async(req,res)=>{
               .json(new apiResponse(200,{},"User logged out"))
 })
 
+const refreshAccessToken=asyncHandler(async(req,res)=>{
+    const incomingRefreshToken=req.cookies.refreshToken || req.body.refreshToken
+
+    if(!incomingRefreshToken){
+        throw new apiError(401,"refreshToken not found")
+    }
+
+    const decodedToken=jwt.verify(incomingRefreshToken,process.env.REFRESH_TOKEN)
+    const user=await User.findById(decodedToken?._id)
+    if(!user){
+        throw new apiError(401,"invalid refreshToken")
+    }
+    if(incomingRefreshToken!==user?.refreshToken){
+        throw new apiError(401,"refreshToken expired or used")
+    }
+
+    const options={
+        httpOnly:true,
+        secure:true
+    }
+    const {accessToken,refreshToken}=await generateAccessAndRefreshTokens(user._id)
+    // console.log(accessToken)
+    // console.log(refreshToken)
+    return res
+           .status(200)
+           .cookie("accessToken",accessToken,options)
+           .cookie("refreshToken",refreshToken,options)
+           .json(
+            new apiResponse(
+                200,
+                {accessToken,refreshToken},
+                "accessToken refreshed"
+            )
+           )
+})
 
 
 export {
     registerUser,
     loginUser,
-    logoutUser
+    logoutUser,
+    refreshAccessToken
 }
