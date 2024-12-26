@@ -264,11 +264,73 @@ const updateUserCoverImage=asyncHandler(async(req,res)=>{
 
     return res.status(200)
               .json(new apiResponse(200,user,"coverImage successfully uploaded"))
-})  
+})
 
-
-
-
+const getChannelProfile=asyncHandler(async(req,res)=>{
+    const {username}=req.params
+    if(!username?.trim()){
+        throw new apiError(400,"username is missing")
+    }
+    const channel= await User.aggregate([
+        {
+            $match:{
+                username:username?.toLowerCase()
+            }
+        },
+        {
+            $lookup:{
+                from:"subcriptions",
+                localField:"_id",
+                foreignField:"channel",
+                as:"subscribers"
+            }
+        },
+        {
+            $lookup:{
+                from:"subcriptions",
+                localField:"_id",
+                foreignField:"subscriber",
+                as:"subscribedTo"
+            }
+        },
+        {
+            $addFields:{
+                subcribersCount:{
+                    $size:"$subscribers"
+                },
+                subcribedToCount:{
+                    $size:"$subscribedTo"
+                },
+                isSubscribed:{
+                    if:{$in :[req.user?._id,"$sucribers.subscriber"]},
+                    then:true,
+                    else:false
+                }
+            }
+        },
+        {
+            $project:{
+                fullname:1,
+                username:1,
+                avatar:1,
+                coverImage:1,
+                subscribersCount:1,
+                subcribedToCount:1,
+                isSubscribed:1,
+                createdAt:1
+            }
+        }
+       
+    ])
+    if (!channel?.length){
+        throw new apiError(400,"channel not found")
+    }
+    
+    return res.status(200)
+               .json(
+                new apiResponse(200,channel[0],"channel profile fetched successfully")
+            )
+})
 
 
 export {
@@ -280,5 +342,6 @@ export {
     getCurrentUser,
     updateAccountDetails,
     updateUserAvatar,
-    updateUserCoverImage
+    updateUserCoverImage,
+    getChannelProfile
 }
