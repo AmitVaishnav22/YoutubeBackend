@@ -366,7 +366,7 @@ const getWatchHistory=asyncHandler(async(req,res)=>{
             ]
             }
         }
-    ])
+    ]) 
 
     
     console.log(user[0].watchHistory)

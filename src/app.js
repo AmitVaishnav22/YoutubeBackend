@@ -18,5 +18,9 @@ app.use(cookieParser())
 //routes
 
 import userRouter from './routes/user.route.js'
+import subcriptionRouter from './routes/subsciptions.route.js'
+
 app.use("/api/v1/users",userRouter)
+app.use("/api/v1/subscriptions",subcriptionRouter)
+
 export {app}
