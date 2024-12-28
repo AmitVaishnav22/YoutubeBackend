@@ -269,6 +269,7 @@ const updateUserCoverImage=asyncHandler(async(req,res)=>{
 
 const getChannelProfile=asyncHandler(async(req,res)=>{
     const {username}=req.params
+    console.log(username)
     if(!username?.trim()){
         throw new apiError(400,"username is missing")
     }
@@ -303,7 +304,7 @@ const getChannelProfile=asyncHandler(async(req,res)=>{
                     $size:"$subscribedTo"
                 },
                 isSubscribed:{
-                    if:{$in :[req.user?._id,"$sucribers.subscriber"]},
+                    if:{$in :[req.user?._id,"$subcribers.subscriber"]},
                     then:true,
                     else:false
                 }

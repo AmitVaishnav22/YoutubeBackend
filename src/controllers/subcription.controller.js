@@ -45,6 +45,100 @@ const toggleSubcription=asyncHandler(async(req,res)=>{
 
 })
 
+
+const getUserChannelSubscriptions=asyncHandler(async(req,res)=>{
+    //To create a proper controller for returning the list of subscribers of a channel using your existing
+    //subscriptionSchema, you need to query the database for all subscriptions where the channel field matches the provided channelId
+    const {channelId}=req.params
+    if(!isValidObjectId(channelId)){
+        throw new apiError(400,"Invalid channelId")
+    }
+    try {
+        const subcribers=await Subscription.aggregate([
+            {
+                $match:{
+                    channel : new mongoose.Types.ObjectId(channelId)
+                }
+            },
+            {
+                $lookup:{
+                    from:"users",
+                    localField:"subscriber",
+                    foreignField:"_id",
+                    as:"subscribers"
+                }
+            },
+            {
+                $unwind:"$subscribers"
+            },
+            {
+                $project:{
+                    _id:1,
+                    "subscribers._id":1,
+                    "subscribers.email":1,
+                    "subscribers.username":1,
+                    "subscribers.avatar":1
+                }
+            }
+        ])
+        if (!subcribers || subcribers.length===0){
+            throw new apiError(404,"No subcribers found")
+        }
+        console.log(subcribers)
+        return res.status(200)
+                  .json(new apiResponse(200,subcribers,"Subcribers found"))
+    } catch (error) {
+        console.log(error)
+    }
+})
+
+const getSubscribedChannels=asyncHandler(async(req,res)=>{
+    //To create a proper controller for returning the list of channels that a user is subscribed to using your existing
+    //subscriptionSchema, you need to query the database for all subscriptions where the subscriber field matches the current user's _id
+    const {channelId}=req.params
+    if(!isValidObjectId(channelId)){
+        throw new apiError(400,"Invalid channelId")
+    }
+    try {
+        const subscribedChannels=await Subscription.aggregate([
+            {
+                $match:{
+                    subscriber : new mongoose.Types.ObjectId(channelId)
+                }
+            },
+            {
+                $lookup:{
+                    from:"users",
+                    localField:"channel",
+                    foreignField:"_id",
+                    as:"channels"
+                }
+            },
+            {
+                $unwind:"$channels"
+            },
+            {
+                $project:{
+                    _id:1,
+                    "channels._id":1,
+                    "channels.email":1,
+                    "channels.username":1,
+                    "channels.avatar":1
+                }
+            }
+        ])
+        if (!subscribedChannels || subscribedChannels.length===0){
+            throw new apiError(404,"No subscribed channels found")
+        }
+        console.log(subscribedChannels)
+        return res.status(200)
+                  .json(new apiResponse(200,subscribedChannels,"Subscribed channels found"))
+    } catch (error) {
+        console.log(error)
+    }
+})
 export{
-    toggleSubcription
+    toggleSubcription,
+    getUserChannelSubscriptions,
+    getSubscribedChannels
 }
