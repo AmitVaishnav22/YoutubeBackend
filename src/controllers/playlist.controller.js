@@ -51,30 +51,30 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
 });
 
 const removeVideoFromPlaylist=asyncHandler(async(req,res)=>{
-    const {videoId,playlistId}=req.params
-    // if(!playlistId && !videoId && !isValidObjectId(playlistId) && !isValidObjectId(videoId)){
-    //     throw new apiError(400,"Please provide playlistId and videoId (invalid Fetch)")
-    // }
-    const getVideo = await Playlist.findOne({ _id: playlistId, videos: new Types.ObjectId(videoId)  })
-        if (!getVideo) {
-            return res
-                .status(404)
-                .json(new apiResponse(404, null, "Video not found in playlist"))
+    const {  videoId,playlistId } = req.params;
+
+    try {
+        if (!playlistId && !videoId) {
+            return res.status(400).json(new apiResponse(400, null, "Invalid playlist or video ID"));
         }
-    console.log(getVideo)
-    const removeVideoFromPlaylist = await Playlist.findByIdAndUpdate(playlistId, {
-        $pull: {
-                videos: videoId
-            }
-        },{new:true})
-    if (removeVideoFromPlaylist) {
+
+        const updatedPlaylist = await Playlist.findByIdAndUpdate(
+            playlistId, // Directly pass the ID here
+            { $pull: { videos: videoId } },
+            { new: true } // Return the updated document
+        );
+
+        if (!updatedPlaylist) {
+            return res.status(404).json(new apiResponse(404, null, "Video not found in playlist"));
+        }
+
         return res
             .status(200)
-            .json(new apiResponse(200, removeVideoFromPlaylist, "Video removed from playlist successfully"))
-        }
-    return res
-        .status(500)
-        .json(new apiResponse(500, null, "Something went wrong at removing video from playlist"))
+            .json(new apiResponse(200, updatedPlaylist, "Video removed from playlist successfully"));
+    } catch (error) {
+        console.error("Error removing video from playlist:", error);
+        return res.status(500).json(new apiResponse(500, null, "Internal server error"));
+    }
 })
 
 const deletePlaylist=asyncHandler(async(req,res)=>{
