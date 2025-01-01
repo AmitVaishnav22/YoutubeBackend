@@ -78,8 +78,36 @@ const getLikedVideos=asyncHandler(async(req,res)=>{
               .json(new apiResponse(200,userLikedVideos,"Liked videos fetched successfully"))
 })
 
+const toggleCummunityPostLike=asyncHandler(async(req,res)=>{
+    const {postId}=req.params
+    if(!postId){
+        throw new apiError(400,"Please provide postId")
+    }
+    const like=await Like.findOne({
+        communityPost:postId,
+        likedBy:req.user._id
+    })
+    if(like){
+        const likeToggle=await Like.findByIdAndDelete(like._id)
+        if(!likeToggle){
+            throw new apiError(400,"Something went wrong while removing like")
+        }
+        return res.status(200).json(new apiResponse(200,null,"Like removed successfully"))
+    }
+    const newLike=await Like.create({
+        communityPost:postId,
+        likedBy:req.user._id
+    })
+    if(!newLike){
+        throw new apiError(400,"Something went wrong while adding like")
+    }
+    return res.status(200)
+              .json(new apiResponse(200,newLike,"Like added successfully"))
+})
+
 export {
     toggleVideoLike,
     toggleCommentLike,
-    getLikedVideos
-}       
+    getLikedVideos,
+    toggleCummunityPostLike
+}      

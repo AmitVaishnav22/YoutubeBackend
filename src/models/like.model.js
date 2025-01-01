@@ -6,6 +6,10 @@ const likeSchema=new Schema({
         type:Schema.Types.ObjectId,
         ref:"Video",
     },
+    communityPost:{
+        type:Schema.Types.ObjectId,
+        ref:"Community",
+    },
     comment:{
         type:Schema.Types.ObjectId,
         ref:"Comment",
