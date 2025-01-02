@@ -51,18 +51,19 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
 });
 
 const removeVideoFromPlaylist=asyncHandler(async(req,res)=>{
-    const {  videoId,playlistId } = req.params;
-
+    const {  videoId,playListId } = req.params;
+    //console.log(videoId,playListId)
     try {
-        if (!playlistId && !videoId) {
+        if (!playListId && !videoId) {
             return res.status(400).json(new apiResponse(400, null, "Invalid playlist or video ID"));
         }
 
         const updatedPlaylist = await Playlist.findByIdAndUpdate(
-            playlistId, // Directly pass the ID here
+            playListId, 
             { $pull: { videos: videoId } },
-            { new: true } // Return the updated document
+            { new: true } 
         );
+        //console.log(updatedPlaylist)
 
         if (!updatedPlaylist) {
             return res.status(404).json(new apiResponse(404, null, "Video not found in playlist"));

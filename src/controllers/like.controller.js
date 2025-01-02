@@ -80,7 +80,7 @@ const getLikedVideos=asyncHandler(async(req,res)=>{
 
 const toggleCummunityPostLike=asyncHandler(async(req,res)=>{
     const {postId}=req.params
-    console.log(postId)
+    //console.log(postId)
     const like=await Like.findOne({
         communityPost:postId,
         likedBy:req.user._id

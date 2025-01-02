@@ -13,7 +13,7 @@ router
      .delete(deletePlaylist)
 
 router.route("/add/:videoId/:playlistId").patch(addVideoToPlaylist);
-router.route("/remove/:videoId/:playListId").patch(removeVideoFromPlaylist)
+router.route("/remove/:videoId/:playListId").delete(removeVideoFromPlaylist)
 router.route("/u/:userId").get(getUserPlaylists)
 
-export default router  
+export default router   
