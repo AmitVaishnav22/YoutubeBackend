@@ -8,7 +8,7 @@ router.use(verifyJWT);
 
 router.route("/t/v/:videoId").post(toggleVideoLike)
 router.route("/t/c/:commentId").post(toggleCommentLike)
-router.route("t/cp/:communityPostId").post(toggleCummunityPostLike)
+router.route("/t/cp/:postId").post(toggleCummunityPostLike)
 router.route("/videos").get(getLikedVideos)
 
 

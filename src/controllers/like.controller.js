@@ -80,9 +80,7 @@ const getLikedVideos=asyncHandler(async(req,res)=>{
 
 const toggleCummunityPostLike=asyncHandler(async(req,res)=>{
     const {postId}=req.params
-    if(!postId){
-        throw new apiError(400,"Please provide postId")
-    }
+    console.log(postId)
     const like=await Like.findOne({
         communityPost:postId,
         likedBy:req.user._id

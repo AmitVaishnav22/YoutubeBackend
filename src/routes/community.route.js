@@ -1,5 +1,5 @@
 import { Router } from "express";
-import {createCommunityPost,updateCommunityPost,deleteCommunityPost,getUserPosts} from "../controllers/community.controller.js"
+import {createCommunityPost,updateCommunityPostImage,updateCommunityPostContent,deleteCommunityPost,getUserPosts} from "../controllers/community.controller.js"
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
 
@@ -14,9 +14,9 @@ router.route("/").post(upload.fields([
         maxCount:1
     }
 ]),createCommunityPost);
-router.route("/:postId").patch(upload.single("image"),updateCommunityPost)
-                        .delete(deleteCommunityPost);
-router.route("/user/:userId").get(getUserPosts);
+router.route("/:postId").patch(upload.single("image"),updateCommunityPostImage).delete(deleteCommunityPost);
+router.route("/u/:postId").patch(updateCommunityPostContent)
+router.route("/user").get(getUserPosts);
 
 
 export default router;

@@ -10,6 +10,10 @@ const commentSchema=new Schema({
         type:Schema.Types.ObjectId,
         ref:"Video",
     },
+    communityPost:{
+        type:Schema.Types.ObjectId,
+        ref:"Community",
+    },
     owner:{
         type:Schema.Types.ObjectId,
         ref:"User",

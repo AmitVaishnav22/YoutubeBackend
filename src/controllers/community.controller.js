@@ -33,54 +33,37 @@ export const createCommunityPost = asyncHandler(async (req, res) => {
     return res.status(201).json(new apiResponse(201, post, "Post created successfully"));
 });
 
-const updateCommunityPost = asyncHandler(async (req, res) => {
-    const { postId } = req.params;
+const updateCommunityPostContent = asyncHandler(async (req, res) => {
     const { content } = req.body;
-    const image = req.files?.image?.[0]?.path;
-
-    const existingPost = await Community.findById(postId);
-    if (!existingPost) {
-        throw new apiError(404, "Post Not Found");
+    const updatedContent=await Community.findByIdAndUpdate(req.params.postId, { content }, { new: true });
+    if(!updatedContent){
+        throw new apiError(404,"Post Not Found")
     }
+    return res.status(200)
+              .json(new apiResponse(200,updatedContent,"Post Updated Successfully"))
+});
 
-    if (existingPost.owner.toString() !== req.user._id.toString()) {
-        throw new apiError(403, "You are not authorized to update this post");
-    }
-
-    let imagePath;
-    if (image) {
+const updateCommunityPostImage = asyncHandler(async (req, res) => {
+    const { postId } = req.params;
+    const image = req.file?.path;
+    const post = await Community.findById(postId);
+    if (post.image) {
         try {
-            imagePath = await uploadOnCloudinary(image);
+            const publicId = post.image.split('/').pop().split('.')[0]; // Extract Cloudinary public ID
+            await deleteOnCloudinary(publicId);
         } catch (error) {
-            throw new apiError(500, "Image upload failed");
+            throw new apiError(500, "Failed to delete previous image");
         }
     }
 
-    const previousFilePath = existingPost?.image;
-    if (previousFilePath && imagePath) {
-        await deleteOnCloudinary(previousFilePath);
+    const imagePath=await uploadOnCloudinary(image);
+    //console.log(imagePath);
+    const updatedPost=await Community.findByIdAndUpdate(postId,{image:imagePath?.url},{new:true})
+    if(!updatedPost){
+        throw new apiError(404,"Post Not Found")
     }
-
-    if (!content && !imagePath) {
-        throw new apiError(400, "No updates provided");
-    }
-
-    const updatedContent = await Community.findByIdAndUpdate(
-        postId,
-        {
-            content: content || existingPost.content, 
-            image: imagePath?.url || previousFilePath || imagePath?.url || "", 
-        },
-        { new: true }
-    );
-
-    if (!updatedContent) {
-        throw new apiError(400, "Failed to update post");
-    }
-
-    return res.status(200).json(new apiResponse(200, updatedContent, "Post Updated Successfully"));
-});
-
+    return res.status(200).json(new apiResponse(200, updatedPost, "Post Updated Successfully"));
+})
 
 const deleteCommunityPost = asyncHandler(async (req, res) => {
     const {postId}=req.params
@@ -101,9 +84,9 @@ const getUserPosts=asyncHandler(async(req,res)=>{
         },
         {
             $lookup:{
-                from:"likes",
+                from:"likes", 
                 localField:"_id",
-                foreignField:"post",
+                foreignField:"communityPost",
                 as:"likes"
             }
         },
@@ -111,7 +94,7 @@ const getUserPosts=asyncHandler(async(req,res)=>{
             $lookup:{
                 from:"comments",
                 localField:"_id",
-                foreignField:"post",
+                foreignField:"communityPost",
                 as:"comments"
             }
         },
@@ -134,7 +117,8 @@ const getUserPosts=asyncHandler(async(req,res)=>{
 })
 
 export {
-    updateCommunityPost,
+    updateCommunityPostContent,
+    updateCommunityPostImage,
     deleteCommunityPost,
     getUserPosts
 }

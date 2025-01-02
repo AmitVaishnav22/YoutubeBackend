@@ -72,7 +72,7 @@ const getChannelVideos=asyncHandler(async(req,res)=>{
         },{
             $lookup:{
                 from:"comments",
-                localField:"_id",
+                localField:"_id", 
                 foreignField:"video",
                 as:"comments"
             }

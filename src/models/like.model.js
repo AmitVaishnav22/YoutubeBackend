@@ -8,7 +8,7 @@ const likeSchema=new Schema({
     },
     communityPost:{
         type:Schema.Types.ObjectId,
-        ref:"Community",
+        ref:"Community", 
     },
     comment:{
         type:Schema.Types.ObjectId,

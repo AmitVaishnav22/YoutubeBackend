@@ -23,6 +23,28 @@ const addComment=asyncHandler(async(req,res)=>{
               .json(new apiResponse(200,comment,"comment successfully added"))
 })
 
+const addCommentC=asyncHandler(async(req,res)=>{
+    const {postId}=req.params
+    const { content }=req.body
+    if (!postId || !content){
+        throw new apiError(400,"please enter your comment to a Post")
+    }
+    const comment=await Comment.create({
+        content,
+        communityPost:postId,
+        owner:req.user._id
+    })
+    if(!comment){
+        throw new apiError(400,"something went wrong while commenting")
+    }
+    return res.status(200)
+              .json(new apiResponse(200,comment,"comment successfully added to communityPost"))
+})
+
+
+
+
+
 const updateComment=asyncHandler(async(req,res)=>{
     const {commentId}=req.params
     const { content }=req.body
@@ -38,6 +60,10 @@ const updateComment=asyncHandler(async(req,res)=>{
     return res.status(200)
               .json(new apiResponse(200,updatedComment,"comment updated successfully"))
 })
+
+
+
+
 
 const deleteComment=asyncHandler(async(req,res)=>{
     const {commentId}=req.params
@@ -89,10 +115,53 @@ const getVideoComments=asyncHandler(async(req,res)=>{
 })
 
 
+const getCommunityCommentsC=asyncHandler(async(req,res)=>{
+    const {postId}=req.params
+    const {page=1,limit=10}=req.query 
+    const skip = (parseInt(page) - 1) * parseInt(limit)
+    const comments=await Comment.aggregate([{
+        $match:{communityPost:new mongoose.Types.ObjectId(postId)}
+    },
+    {
+        $lookup:{
+            from: "users",
+            localField: "owner",
+            foreignField: "_id",
+            as: "owner"
+        }
+    },{
+        $unwind:"$owner"
+    },
+    {
+        $project:{
+            content:1,
+            createdAt:1,
+            owner:{
+                _id:"$owner._id",
+                username:"$owner.username",
+                avatar:"$owner.avatar",
+            }
+        }
+    },
+    {$skip:skip},
+    {$limit:parseInt(limit)}
+])
+    if(!comments.length){
+        throw new apiError(400,"no comments found for this post")
+    }
+    return res.status(200)
+              .json(new apiResponse(200,comments,"comments fetched successfully"))
+
+})
+
+
 export {
     addComment,
     updateComment,
     deleteComment,
     getVideoComments,
+
+    addCommentC,
+    getCommunityCommentsC,
  
-}
+}                         
