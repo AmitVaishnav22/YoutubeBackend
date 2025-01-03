@@ -26,6 +26,7 @@ import likeRouter from './routes/like.route.js'
 import dashboardRouter from './routes/dashboard.route.js'
 import communityRouter from './routes/Community.route.js'
 import memberShipRouter from './routes/membership.route.js'
+import healthCheckRouter from './routes/healthcheck.route.js'
 
 app.use("/api/v1/users",userRouter)
 app.use("/api/v1/subscriptions",subcriptionRouter)
@@ -36,5 +37,7 @@ app.use("/api/v1/like",likeRouter)
 app.use("/api/v1/dashboard",dashboardRouter)
 app.use("/api/v1/community",communityRouter)
 app.use("/api/v1/memberships",memberShipRouter)
+app.use("/api/v1/health", healthCheckRouter)
+
 
 export {app}
