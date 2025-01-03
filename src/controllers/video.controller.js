@@ -149,7 +149,7 @@ const getAllVideos=asyncHandler(async(req,res)=>{
         $lookup:{
             from:"users",
             localField:"owner",
-            ForeignField:"_id",
+            foreignField:"_id",
             as:"owner"
         }
     })

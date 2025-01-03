@@ -7,6 +7,7 @@ import {Membership} from "../models/membership.model.js";
 const createMembership = asyncHandler(async (req, res) => {
     const { channel, price, tier} = req.body;
     const user = req.user?._id;
+    //console.log(user)
     if (!channel ||!price ||!tier) {
         throw new apiError(400, "Please provide all required fields");
     }
@@ -22,7 +23,7 @@ const createMembership = asyncHandler(async (req, res) => {
     }
     const membership = await Membership.create({
         channel,
-        user,
+        user:user,
         price,
         tier,
         status:"active"
@@ -34,17 +35,18 @@ const createMembership = asyncHandler(async (req, res) => {
 })
 
 const getMyMemberships = asyncHandler(async (req, res) => {
+    //console.log(req.user?._id)
     const memberships=await Membership.aggregate([
         {
             $match:{
-                user:new mongoose.Types.ObjectId(req.user._id)
+                user:new mongoose.Types.ObjectId(req.user?._id)
             }
         },
         {
             $lookup:{
                 from:"users",
                 localField:"channel",
-                foreignField:"_id",
+                foreignField:"_id", 
                 as:"channel"
             }
         },
