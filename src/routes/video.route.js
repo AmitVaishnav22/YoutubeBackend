@@ -14,7 +14,7 @@ router.post("/publish",
             maxCount:1
         },{
             name:"thumbnail",
-            maxCount:1
+            maxCount:1 
         }
     ]),
     publishVideo
