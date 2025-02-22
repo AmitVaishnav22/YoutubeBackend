@@ -5,6 +5,7 @@ import {Video} from "../models/video.model.js"
 import { uploadOnCloudinary,deleteOnCloudinary } from "../utils/cloudinary.js"
 import { User } from "../models/user.model.js"
 import mongoose from "mongoose"
+import { setCache,getCache,delCache,clearCacheByPattern } from "../redis/client.redis.js"
 
 
 const publishVideo=asyncHandler(async (req,res)=>{
@@ -36,16 +37,23 @@ const publishVideo=asyncHandler(async (req,res)=>{
     if (!video) {
         throw new apiError(500, "Fail to Publish Video")
     }
+    await clearCacheByPattern("videos:*")
     return res.status(200)
               .json(new apiResponse(200,video,"Video Published Successfully"))
 })
 
 const getVideoById=asyncHandler(async(req,res)=>{
     const {videoId}=req.params
+    const cachedVideo=await getCache(`video:${videoId}`)
+    if(cachedVideo){
+        return res.status(200)
+              .json(new apiResponse(200,cachedVideo,"Video Found Successfully from Cache"))
+    }
     const video=await Video.findById(videoId)
     if(!video){
         throw new apiError(404,"Video Not Found")
     }
+    await setCache(`video:${videoId}`, video, 60) 
     return res.status(200)
               .json(new apiResponse(200,video,"Video Found Successfully"))
 
@@ -87,6 +95,7 @@ const updateVideo=asyncHandler(async(req,res)=>{
     if(!updatedVideoDetails){
         throw new apiError(500,"Fail to Update Video")
     }
+    await clearCacheByPattern("videos:*")
     return res.status(200)
               .json(new apiResponse(200,updatedVideoDetails,"VideoDetails Updated Successfully"))
 })
@@ -103,6 +112,9 @@ const deleteVideo=asyncHandler(async(req,res)=>{
     await deleteOnCloudinary(video.videoFile)
     await deleteOnCloudinary(video.thumbnail)
     await Video.findByIdAndDelete(videoId)
+    await delCache(`video:${videoId}`)
+    await clearCacheByPattern("videos:*")
+
     return res.status(200)
             .json(new apiResponse(200,{},"Video Deleted Successfully"))
 })
