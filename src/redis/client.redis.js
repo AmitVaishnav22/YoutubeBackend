@@ -67,4 +67,41 @@ const clearCacheByPattern=async (pattern) =>{
     }
 }
 
-export { setCache, getCache, delCache ,clearCacheByPattern}  
+const addToSet = async (key, val) => {
+    try {
+        await client.sAdd(key, val);
+    } catch (error) {
+        console.error(`Error adding ${val} to set ${key}`, error);
+    }
+};
+
+const removeFromSet = async (key, val) => {
+    try {
+        await client.sRem(key, val);
+    } catch (error) {
+        console.error(`Error removing ${val} from set ${key}`, error);
+    }
+};
+
+const isMemberOfSet = async (key, val) => {
+    try {
+        return await client.sIsMember(key, val);
+    } catch (error) {
+        console.error(`Error checking membership of ${val} in set ${key}`, error);
+        return false;
+    }
+};
+
+const getSetMembers = async (key) => {
+    try {
+        return await client.sMembers(key);
+    } catch (error) {
+        console.error(`Error retrieving members of set ${key}`, error);
+        return [];
+    }
+};
+
+
+export { client,setCache, getCache, delCache ,clearCacheByPattern,
+    addToSet, removeFromSet, isMemberOfSet, getSetMembers 
+};

@@ -4,6 +4,7 @@ import { apiResponse } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Community } from "../models/community.model.js";
 import { uploadOnCloudinary,deleteOnCloudinary } from "../utils/cloudinary.js";
+import { delCache ,getCache,setCache} from "../redis/client.redis.js";
 
 
 export const createCommunityPost = asyncHandler(async (req, res) => {
@@ -30,6 +31,8 @@ export const createCommunityPost = asyncHandler(async (req, res) => {
         throw new apiError(500, "Failed to create post");
     }
 
+    await delCache(`userPosts:${req.user._id}`);
+
     return res.status(201).json(new apiResponse(201, post, "Post created successfully"));
 });
 
@@ -39,6 +42,7 @@ const updateCommunityPostContent = asyncHandler(async (req, res) => {
     if(!updatedContent){
         throw new apiError(404,"Post Not Found")
     }
+    await delCache(`userPosts:${req.user._id}`);
     return res.status(200)
               .json(new apiResponse(200,updatedContent,"Post Updated Successfully"))
 });
@@ -62,6 +66,7 @@ const updateCommunityPostImage = asyncHandler(async (req, res) => {
     if(!updatedPost){
         throw new apiError(404,"Post Not Found")
     }
+    await delCache(`userPosts:${req.user._id}`);
     return res.status(200).json(new apiResponse(200, updatedPost, "Post Updated Successfully"));
 })
 
@@ -71,12 +76,20 @@ const deleteCommunityPost = asyncHandler(async (req, res) => {
     if(!deletedPost){
         throw new apiError(404,"Post Not Found")
     }
+    await delCache(`userPosts:${req.user._id}`);
     return res.status(200)
               .json(new apiResponse(200,{},"Post Deleted Successfully"))
 })
 
 const getUserPosts=asyncHandler(async(req,res)=>{
-    const post=await Community.aggregate([
+    const userId = req.user._id.toString();
+    const redisKey = `userPosts:${userId}`;
+    const cachedPosts = await getCache(redisKey);
+    if (cachedPosts) {
+        return res.status(200)
+                  .json(new apiResponse(200, cachedPosts, "Posts fetched successfully from redis"));
+    }
+    const posts=await Community.aggregate([
         {
             $match:{
                 owner:new mongoose.Types.ObjectId(req.user._id)
@@ -109,11 +122,12 @@ const getUserPosts=asyncHandler(async(req,res)=>{
             }
         }
     ])
-    if(!post || post.length==0){
+    if(!posts || posts.length==0){
         throw new apiError(404,"No Post Found")
     }
+    await setCache(redisKey, posts, 3600);
     return res.status(200)
-              .json(new apiResponse(200,post,"Posts successfully fetched"))
+              .json(new apiResponse(200,posts,"Posts successfully fetched"))
 })
 
 export {

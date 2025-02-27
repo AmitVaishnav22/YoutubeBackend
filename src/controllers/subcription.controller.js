@@ -3,6 +3,7 @@ import { apiError } from "../utils/apiError.js";
 import { apiResponse } from "../utils/apiResponse.js";
 import { Subscription } from "../models/subcription.model.js";
 import { User } from "../models/user.model.js";
+import { getCache, setCache,delCache } from "../redis/client.redis.js";
 import mongoose,{isValidObjectId} from "mongoose";
 
 const toggleSubcription=asyncHandler(async(req,res)=>{
@@ -24,6 +25,8 @@ const toggleSubcription=asyncHandler(async(req,res)=>{
         })
         if(getSubscription){
             const deleteSubcription=await Subscription.findByIdAndDelete(getSubscription._id)
+            await delCache(`channelSubscribers:${req.user._id}`);
+            await delCache(`userSubscribedChannels:${channelId}`);
             if (deleteSubcription){
                 return res.status(200)
                           .json(new apiResponse(200,deleteSubcription,"Unsubcribed successfully"))
@@ -34,6 +37,8 @@ const toggleSubcription=asyncHandler(async(req,res)=>{
                 subscriber:req.user._id,
                 channel:channelId
             })
+            await delCache(`channelSubscribers:${req.user._id}`);
+            await delCache(`userSubscribedChannels:${channelId}`);
             if(newSubcription){
                 return res.status(200)
                           .json(new apiResponse(200,newSubcription,"Subcribed successfully"))
@@ -53,7 +58,12 @@ const getUserChannelSubscriptions=asyncHandler(async(req,res)=>{
     if(!isValidObjectId(channelId)){
         throw new apiError(400,"Invalid channelId")
     }
+    const redisKey = `channelSubscribers:${channelId}`;
     try {
+        const cachedSubscribers = await getCache(redisKey);
+        if (cachedSubscribers) {
+            return res.status(200).json(new apiResponse(200, cachedSubscribers, "Subscribers fetched from Redis"));
+        }
         const subcribers=await Subscription.aggregate([
             {
                 $match:{
@@ -84,13 +94,13 @@ const getUserChannelSubscriptions=asyncHandler(async(req,res)=>{
         if (!subcribers || subcribers.length===0){
             throw new apiError(404,"No subcribers found")
         }
-        console.log(subcribers)
+        //console.log(subcribers)
+        await setCache(redisKey, subcribers, 3);
         return res.status(200)
                   .json(new apiResponse(200,subcribers,"Subcribers found"))
     } catch (error) {
         console.log(error)
-    }
-})
+    }})
 
 const getSubscribedChannels=asyncHandler(async(req,res)=>{
     //To create a proper controller for returning the list of channels that a user is subscribed to using your existing
@@ -99,7 +109,12 @@ const getSubscribedChannels=asyncHandler(async(req,res)=>{
     if(!isValidObjectId(channelId)){
         throw new apiError(400,"Invalid channelId")
     }
+    const redisKey = `userSubscribedChannels:${channelId}`;
     try {
+        const cachedChannels = await getCache(redisKey);
+        if (cachedChannels) {
+            return res.status(200).json(new apiResponse(200, cachedChannels, "Subscribed channels fetched from Redis"));
+        }
         const subscribedChannels=await Subscription.aggregate([
             {
                 $match:{
@@ -130,7 +145,8 @@ const getSubscribedChannels=asyncHandler(async(req,res)=>{
         if (!subscribedChannels || subscribedChannels.length===0){
             throw new apiError(404,"No subscribed channels found")
         }
-        console.log(subscribedChannels)
+        //console.log(subscribedChannels)
+        await setCache(redisKey, subscribedChannels, 3);
         return res.status(200)
                   .json(new apiResponse(200,subscribedChannels,"Subscribed channels found"))
     } catch (error) {

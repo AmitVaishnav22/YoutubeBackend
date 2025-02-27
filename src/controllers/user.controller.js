@@ -5,7 +5,7 @@ import {deleteOnCloudinary, uploadOnCloudinary} from "../utils/cloudinary.js"
 import {apiResponse} from "../utils/apiResponse.js"
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose"
- 
+import { getCache,setCache,delCache } from "../redis/client.redis.js"
 
 const generateAccessAndRefreshTokens=async(userId)=>{
     try {
@@ -273,6 +273,12 @@ const getChannelProfile=asyncHandler(async(req,res)=>{
     if(!username?.trim()){
         throw new apiError(400,"username is missing")
     }
+    const redisKey = `channelProfile:${username.toLowerCase()}`;
+    const cachedChannel=await getCache(redisKey)
+    if(cachedChannel){
+        return res.status(200)
+                    .json(new apiResponse(200,cachedChannel,"channel profile fetched successfully from redis"))
+    }
     const channel= await User.aggregate([
         {
             $match:{
@@ -328,7 +334,7 @@ const getChannelProfile=asyncHandler(async(req,res)=>{
     if (!channel?.length){
         throw new apiError(400,"channel not found")
     }
-    
+    await setCache(redisKey, channel[0], 3600);
     return res.status(200)
                .json(
                 new apiResponse(200,channel[0],"channel profile fetched successfully")

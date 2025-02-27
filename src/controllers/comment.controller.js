@@ -3,6 +3,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { apiResponse } from "../utils/apiResponse.js";
 import { apiError} from "../utils/apiError.js";
 import { Comment } from "../models/comment.model.js";
+import { getCache,setCache,delCache } from "../redis/client.redis.js";
 
 
 const addComment=asyncHandler(async(req,res)=>{
@@ -19,6 +20,7 @@ const addComment=asyncHandler(async(req,res)=>{
     if(!comment){
         throw new apiError(400,"something went wrong while commenting")
     }
+    await delCache(`videoComments:${videoId}`);
     return res.status(200)
               .json(new apiResponse(200,comment,"comment successfully added"))
 })
@@ -37,6 +39,8 @@ const addCommentC=asyncHandler(async(req,res)=>{
     if(!comment){
         throw new apiError(400,"something went wrong while commenting")
     }
+    await delCache(`postComments:${postId}`);
+
     return res.status(200)
               .json(new apiResponse(200,comment,"comment successfully added to communityPost"))
 })
@@ -57,6 +61,8 @@ const updateComment=asyncHandler(async(req,res)=>{
     if (!updatedComment){
         throw new apiError(400,"something went wrong while updating comment")
     }
+    await delCache(`videoComments:*`);
+    await delCache(`postComments:*`);
     return res.status(200)
               .json(new apiResponse(200,updatedComment,"comment updated successfully"))
 })
@@ -71,6 +77,8 @@ const deleteComment=asyncHandler(async(req,res)=>{
     if(!comment){
         throw new apiError(400,"something went wrong while deleting comment")
     }
+    await delCache(`videoComments:*`);
+    await delCache(`postComments:*`);
     return res.status(200)
               .json(new apiResponse(200,{},"comment deleted successfully"))
 })
@@ -79,6 +87,11 @@ const getVideoComments=asyncHandler(async(req,res)=>{
     const {videoId}=req.params
     const {page=1,limit=10}=req.query 
     const skip = (parseInt(page) - 1) * parseInt(limit)
+    const redisKey = `videoComments:${videoId}:${page}:${limit}`
+    const cachedComments = await getCache(redisKey);
+    if (cachedComments) {
+        return res.status(200).json(new apiResponse(200, cachedComments, "Comments fetched successfully from Redis"));
+    }
     const comments=await Comment.aggregate([{
         $match:{video:new mongoose.Types.ObjectId(videoId)}
     },
@@ -109,6 +122,7 @@ const getVideoComments=asyncHandler(async(req,res)=>{
     if(!comments.length){
         throw new apiError(400,"no comments found for this video")
     }
+    await setCache(redisKey, comments, 3);
     return res.status(200)
               .json(new apiResponse(200,comments,"comments fetched successfully"))
 
@@ -119,6 +133,12 @@ const getCommunityCommentsC=asyncHandler(async(req,res)=>{
     const {postId}=req.params
     const {page=1,limit=10}=req.query 
     const skip = (parseInt(page) - 1) * parseInt(limit)
+
+    const redisKey = `videoComments:${postId}:${page}:${limit}`
+    const cachedComments = await getCache(redisKey);
+    if (cachedComments) {
+        return res.status(200).json(new apiResponse(200, cachedComments, "Comments fetched successfully from Redis"));
+    }
     const comments=await Comment.aggregate([{
         $match:{communityPost:new mongoose.Types.ObjectId(postId)}
     },

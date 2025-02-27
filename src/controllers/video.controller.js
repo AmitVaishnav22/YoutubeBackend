@@ -37,7 +37,7 @@ const publishVideo=asyncHandler(async (req,res)=>{
     if (!video) {
         throw new apiError(500, "Fail to Publish Video")
     }
-    await clearCacheByPattern("videos:*")
+    await delCache("video:*")
     return res.status(200)
               .json(new apiResponse(200,video,"Video Published Successfully"))
 })
@@ -47,7 +47,7 @@ const getVideoById=asyncHandler(async(req,res)=>{
     const cachedVideo=await getCache(`video:${videoId}`)
     if(cachedVideo){
         return res.status(200)
-              .json(new apiResponse(200,cachedVideo,"Video Found Successfully from Cache"))
+              .json(new apiResponse(200,cachedVideo,"Video Found Successfully from redis"))
     }
     const video=await Video.findById(videoId)
     if(!video){
@@ -95,7 +95,7 @@ const updateVideo=asyncHandler(async(req,res)=>{
     if(!updatedVideoDetails){
         throw new apiError(500,"Fail to Update Video")
     }
-    await clearCacheByPattern("videos:*")
+    await delCache("video:*")
     return res.status(200)
               .json(new apiResponse(200,updatedVideoDetails,"VideoDetails Updated Successfully"))
 })
@@ -113,7 +113,6 @@ const deleteVideo=asyncHandler(async(req,res)=>{
     await deleteOnCloudinary(video.thumbnail)
     await Video.findByIdAndDelete(videoId)
     await delCache(`video:${videoId}`)
-    await clearCacheByPattern("videos:*")
 
     return res.status(200)
             .json(new apiResponse(200,{},"Video Deleted Successfully"))

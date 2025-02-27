@@ -3,6 +3,7 @@ import { apiResponse } from "../utils/apiResponse.js";
 import { apiError} from "../utils/apiError.js";
 import { Playlist } from "../models/playlist.model.js";
 import mongoose,{ isValidObjectId ,Types} from "mongoose";
+import { delCache,setCache,getCache } from "../redis/client.redis.js";
 
 
 const createPlaylist=asyncHandler(async(req,res)=>{
@@ -18,6 +19,7 @@ const createPlaylist=asyncHandler(async(req,res)=>{
     if(!playlist){
         throw new apiError(400,"Something went wrong while creating playlist")
     }
+    await delCache(`userPlaylists:${req.user._id}`);
     return res.status(201)
               .json(new apiResponse(201,playlist,"Playlist created successfully"))
 })
@@ -42,6 +44,8 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
         { $push: { videos: videoId } },
         { new: true }
     );
+    await delCache(`playlist:${playlistId}`);
+    await delCache(`userPlaylists:${req.user._id}`);
 
     if (updatedPlaylist) {
         return res.status(200).json(new apiResponse(200, updatedPlaylist, "Video added to playlist successfully"));
@@ -67,8 +71,10 @@ const removeVideoFromPlaylist=asyncHandler(async(req,res)=>{
 
         if (!updatedPlaylist) {
             return res.status(404).json(new apiResponse(404, null, "Video not found in playlist"));
+        
         }
-
+        await delCache(`playlist:${playListId}`);
+        await delCache(`userPlaylists:${req.user._id}`);
         return res
             .status(200)
             .json(new apiResponse(200, updatedPlaylist, "Video removed from playlist successfully"));
@@ -87,6 +93,8 @@ const deletePlaylist=asyncHandler(async(req,res)=>{
     if(!playlist){
         throw new apiError(404,"Playlist not found")
     }
+    await delCache(`playlist:${playlistId}`);
+    await delCache(`userPlaylists:${req.user._id}`);
     return res.status(200)
               .json(new apiResponse(200,{},"Playlist deleted successfully"))
 })
@@ -107,6 +115,8 @@ const updatePlaylist=asyncHandler(async(req,res)=>{
     if(!playlist){
         throw new apiError(404,"Playlist not found")
     }
+    await delCache(`playlist:${playlistId}`);
+    await delCache(`userPlaylists:${req.user._id}`);
     return res.status(200)
               .json(new apiResponse(200,playlist,"Playlist updated successfully"))
 })
@@ -116,18 +126,30 @@ const getPlatlistById=asyncHandler(async(req,res)=>{
     if(!playlistId || !isValidObjectId(playlistId)){
         throw new apiError(400,"Please provide playlistId (invalid Fetch)")
     }
+    const redisKey = `playlist:${playlistId}`;
+    const cachedPlaylist = await getCache(redisKey);
+    if (cachedPlaylist) {
+        return res.status(200).json(new apiResponse(200, cachedPlaylist, "Playlist fetched from Redis"));
+    }
     const playlist=await Playlist.findById(playlistId)
     if(!playlist){
         throw new apiError(404,"Playlist not found")
     }
+    await setCache(redisKey, playlist, 3600);
     return res.status(200)
               .json(new apiResponse(200,playlist,"Playlist fetched successfully"))
 })
 
 const getUserPlaylists=asyncHandler(async(req,res)=>{
     const {userId}=req.params
+
     if(!userId || !isValidObjectId(userId)){
         throw new apiError(400,"Please provide userId (invalid Fetch)")
+    }
+    const redisKey = `userPlaylists:${userId}`;
+    const cachedPlaylists = await getCache(redisKey);
+    if (cachedPlaylists) {
+        return res.status(200).json(new apiResponse(200, cachedPlaylists, "User Playlists fetched from Redis"));
     }
     const playlist=await Playlist.aggregate([{
         $match:{
@@ -144,6 +166,7 @@ const getUserPlaylists=asyncHandler(async(req,res)=>{
     if(!playlist || playlist.length===0){
         throw new apiError(404,"Playlist not found")
     }
+    await setCache(redisKey, playlist, 3600);
     return res.status(200)
               .json(new apiResponse(200,playlist,"User Playlist fetched successfully"))
 })

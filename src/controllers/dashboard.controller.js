@@ -3,12 +3,19 @@ import {asyncHandler} from "../utils/asyncHandler.js"
 import { apiResponse } from "../utils/apiResponse.js"
 import { apiError} from "../utils/apiError.js"
 import {Video} from "../models/video.model.js"
+import {getCache,setCache} from "../redis/client.redis.js"
 
 
 
 const getChannelStats=asyncHandler(async(req,res)=>{
 
     // channel joined/created can be taken care at frontend (getting timestamps of the user)
+    const userId = req.user._id.toString();
+    const redisKey = `channelStats:${userId}`;
+    const cachedStats = await getCache(redisKey);
+    if (cachedStats) {
+        return res.status(200).json(new apiResponse(200, cachedStats, "Channel Stats fetched from Redis"));
+    }
     const channelStats=await Video.aggregate([{
         $match:{
             owner:new mongoose.Types.ObjectId(req.user._id)
@@ -49,6 +56,8 @@ const getChannelStats=asyncHandler(async(req,res)=>{
     if(!channelStats || channelStats.length==0){
         throw new apiError(404,"Channel Stats not found")
     }
+    await setCache(redisKey, channelStats[0], 3600);
+    //console.log(channelStats)
     return res.status(200)
               .json(new apiResponse(200,channelStats[0],"Channel Stats successfully fetched"))
 })
@@ -56,6 +65,12 @@ const getChannelStats=asyncHandler(async(req,res)=>{
 
 const getChannelVideos=asyncHandler(async(req,res)=>{
     // pagination is taken care at frontend
+    const userId = req.user._id.toString();
+    const redisKey = `channelVideos:${userId}`;
+    const cachedVideos = await getCache(redisKey);
+    if (cachedVideos) {
+        return res.status(200).json(new apiResponse(200, cachedVideos, "Channel Videos fetched from Redis"));
+    }
     const channelVideos=await Video.aggregate([
         {
             $match:{
@@ -96,6 +111,8 @@ const getChannelVideos=asyncHandler(async(req,res)=>{
     if(!channelVideos || channelVideos.length==0){
         throw new apiError(404,"Channel Videos not found")
     }
+    await setCache(redisKey, channelVideos, 3600);
+    //console.log(channelVideos)
     return res.status(200)
               .json(new apiResponse(200,channelVideos,"Channel Videos successfully fetched"))
 })
